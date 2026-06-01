@@ -30,7 +30,6 @@
       overflow-x: hidden;
     }
 
-    /* Scanlines */
     body::before {
       content: '';
       pointer-events: none;
@@ -40,7 +39,6 @@
       background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
     }
 
-    /* Animated background grid */
     body::after {
       content: '';
       pointer-events: none;
@@ -63,7 +61,6 @@
       padding: 0 16px 40px;
     }
 
-    /* ── Header ── */
     header {
       width: 100%;
       max-width: 720px;
@@ -75,11 +72,7 @@
       margin-bottom: 32px;
     }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .logo { display: flex; align-items: center; gap: 12px; }
 
     .logo-icon {
       width: 36px; height: 36px;
@@ -114,7 +107,6 @@
       text-transform: uppercase;
     }
 
-    /* ── ASCII art ── */
     .ascii {
       font-size: 9px;
       line-height: 1.35;
@@ -126,7 +118,6 @@
       overflow: hidden;
     }
 
-    /* ── Card ── */
     .card {
       width: 100%;
       max-width: 720px;
@@ -140,7 +131,6 @@
       box-shadow: 0 0 60px rgba(0,255,200,0.04), 0 0 120px rgba(128,0,255,0.04);
     }
 
-    /* ── Section label ── */
     .label {
       font-size: 10px;
       letter-spacing: 3px;
@@ -153,51 +143,36 @@
     }
     .label::before { content: '▶'; font-size: 8px; color: var(--neon); }
 
-    /* ── Type tabs ── */
-    .tabs {
+    /* ── Supported formats strip ── */
+    .formats-strip {
       display: flex;
-      gap: 6px;
       flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px 14px;
+      background: rgba(0,255,200,0.03);
+      border: 1px solid rgba(0,255,200,0.10);
+      border-radius: 2px;
     }
 
-    .tab {
-      flex: 1;
-      min-width: 80px;
-      padding: 8px 6px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
+    .fmt-badge {
+      font-size: 9px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      cursor: pointer;
-      background: transparent;
-      border: 1px solid rgba(0,255,200,0.12);
-      color: rgba(0,255,200,0.3);
+      padding: 3px 8px;
+      border: 1px solid rgba(0,255,200,0.18);
       border-radius: 2px;
-      transition: all 0.15s;
+      color: rgba(0,255,200,0.4);
+      white-space: nowrap;
     }
 
-    .tab:hover {
-      border-color: rgba(0,255,200,0.35);
-      color: rgba(0,255,200,0.7);
+    .formats-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(0,255,200,0.22);
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
 
-    .tab.active {
-      background: linear-gradient(135deg, rgba(0,255,200,0.12), rgba(128,0,255,0.12));
-      border-color: rgba(0,255,200,0.55);
-      color: var(--neon);
-      text-shadow: 0 0 8px rgba(0,255,200,0.5);
-      box-shadow: 0 0 12px rgba(0,255,200,0.08);
-    }
-
-    /* ── Hint ── */
-    .hint {
-      font-size: 10px;
-      letter-spacing: 1px;
-      color: rgba(0,255,200,0.28);
-      margin-top: -12px;
-    }
-
-    /* ── Textarea / pre ── */
     textarea, pre.output-box {
       width: 100%;
       background: rgba(0,255,200,0.03);
@@ -214,18 +189,17 @@
     }
 
     textarea {
-      height: 120px;
-      min-height: 80px;
+      height: 160px;
+      min-height: 100px;
     }
 
-    textarea::placeholder { color: rgba(0,255,200,0.2); }
+    textarea::placeholder { color: rgba(0,255,200,0.18); }
 
     textarea:focus {
       border-color: rgba(0,255,200,0.45);
       box-shadow: 0 0 0 2px rgba(0,255,200,0.06);
     }
 
-    /* ── Decode button ── */
     .btn-decode {
       width: 100%;
       padding: 14px;
@@ -250,38 +224,33 @@
       box-shadow: 0 0 40px rgba(0,255,200,0.15), inset 0 0 24px rgba(0,255,200,0.07);
     }
 
-    .btn-decode:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
+    .btn-decode:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    .btn-decode.loading {
-      animation: pulse 1s infinite;
-    }
+    .btn-decode.loading { animation: pulse 1s infinite; }
 
     @keyframes pulse {
       0%, 100% { opacity: 0.6; }
       50% { opacity: 1; }
     }
 
-    /* ── Output ── */
     .output-section { display: none; flex-direction: column; gap: 10px; }
     .output-section.visible { display: flex; }
 
     .notice {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
-      padding: 8px 12px;
+      padding: 10px 14px;
       font-size: 10px;
       letter-spacing: 1px;
       border-radius: 2px;
+      line-height: 1.6;
     }
 
-    .notice.auto-extract {
-      border: 1px solid rgba(255,200,0,0.35);
-      background: rgba(255,200,0,0.05);
-      color: var(--gold);
+    .notice.detected {
+      border: 1px solid rgba(0,255,200,0.3);
+      background: rgba(0,255,200,0.05);
+      color: var(--neon);
     }
 
     .notice.error {
@@ -290,8 +259,19 @@
       color: var(--red);
     }
 
+    .notice-icon { flex-shrink: 0; margin-top: 1px; }
+
+    .notice-body { display: flex; flex-direction: column; gap: 2px; }
+    .notice-type {
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+    }
+    .notice-detail { color: rgba(0,255,200,0.5); font-size: 10px; }
+
     pre.output-box {
-      max-height: 280px;
+      max-height: 320px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
@@ -337,7 +317,6 @@
       margin-left: auto;
     }
 
-    /* ── Footer ── */
     footer {
       margin-top: 32px;
       font-size: 10px;
@@ -346,7 +325,6 @@
       text-align: center;
     }
 
-    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0,255,200,0.2); border-radius: 3px; }
@@ -379,24 +357,27 @@
  |____/ \___|____/ \__,_|\__,_|</pre>
 
   <div class="card">
-    <!-- Type selector -->
+
+    <!-- Supported formats -->
     <div>
-      <div class="label">DECODING TYPE</div>
-      <div class="tabs">
-        <button class="tab active" data-type="base64">Base64</button>
-        <button class="tab" data-type="url">URL Enc</button>
-        <button class="tab" data-type="hex">Hexadecimal</button>
-        <button class="tab" data-type="zlib">Zlib</button>
-        <button class="tab" data-type="bzip2">Bzip2</button>
+      <div class="formats-label">⚡ AUTO-DETECTS ALL FORMATS — JUST PASTE AND DECODE</div>
+      <div class="formats-strip">
+        <span class="fmt-badge">XOR + Base64</span>
+        <span class="fmt-badge">Obfuscated Python</span>
+        <span class="fmt-badge">Base64</span>
+        <span class="fmt-badge">URL Encoding</span>
+        <span class="fmt-badge">Hexadecimal</span>
+        <span class="fmt-badge">Zlib</span>
+        <span class="fmt-badge">Bzip2</span>
+        <span class="fmt-badge">ROT13</span>
+        <span class="fmt-badge">Unicode Escape</span>
       </div>
     </div>
 
-    <p class="hint" id="hint">⚡ Auto-detects and extracts payload from obfuscated Python files</p>
-
     <!-- Input -->
     <div>
-      <div class="label">INPUT DATA</div>
-      <textarea id="input" placeholder="Paste encoded text or full obfuscated Python file here..."></textarea>
+      <div class="label">INPUT — PASTE OBFUSCATED CODE</div>
+      <textarea id="input" placeholder="Paste any obfuscated code, encoded string, or full Python file here...&#10;&#10;Supports: XOR ciphers, exec(base64.b64decode(...)), URL encoding, hex, zlib, bzip2, ROT13, and more."></textarea>
     </div>
 
     <!-- Button -->
@@ -404,8 +385,12 @@
 
     <!-- Output -->
     <div class="output-section" id="outputSection">
-      <div class="notice auto-extract" id="autoExtractNotice" style="display:none">
-        ⚡ AUTO-EXTRACTED BASE64 PAYLOAD FROM OBFUSCATED PYTHON FILE
+      <div class="notice detected" id="detectedNotice" style="display:none">
+        <span class="notice-icon">⚡</span>
+        <div class="notice-body">
+          <span class="notice-type" id="detectedType"></span>
+          <span class="notice-detail" id="detectedDetail"></span>
+        </div>
       </div>
       <div class="notice error" id="errorNotice" style="display:none"></div>
       <div id="outputWrap" style="display:none">
@@ -420,57 +405,36 @@
     </div>
   </div>
 
-  <footer>DEDAD v2.0 // CLIENT-SERVER DECODER // ALL FORMATS SUPPORTED</footer>
+  <footer>DEDAD v3.0 // SMART AUTO-DECODER // ALL FORMATS SUPPORTED</footer>
 </div>
 
 <script>
-  const HINTS = {
-    base64: '⚡ Auto-detects and extracts payload from obfuscated Python files',
-    url: '// Decodes percent-encoded (%XX) and + characters',
-    hex: '// Converts hexadecimal string to readable text',
-    zlib: '// Decompresses Base64-encoded Zlib streams (server-side)',
-    bzip2: '// Decompresses Base64-encoded Bzip2 data (server-side)',
-  };
+  const inputEl        = document.getElementById('input');
+  const decodeBtn      = document.getElementById('decodeBtn');
+  const outputSection  = document.getElementById('outputSection');
+  const detectedNotice = document.getElementById('detectedNotice');
+  const detectedType   = document.getElementById('detectedType');
+  const detectedDetail = document.getElementById('detectedDetail');
+  const errorNotice    = document.getElementById('errorNotice');
+  const outputWrap     = document.getElementById('outputWrap');
+  const outputEl       = document.getElementById('output');
+  const copyBtn        = document.getElementById('copyBtn');
+  const clearBtn       = document.getElementById('clearBtn');
+  const charCount      = document.getElementById('charCount');
 
-  let currentType = 'base64';
-
-  const inputEl = document.getElementById('input');
-  const hintEl = document.getElementById('hint');
-  const decodeBtn = document.getElementById('decodeBtn');
-  const outputSection = document.getElementById('outputSection');
-  const autoExtractNotice = document.getElementById('autoExtractNotice');
-  const errorNotice = document.getElementById('errorNotice');
-  const outputWrap = document.getElementById('outputWrap');
-  const outputEl = document.getElementById('output');
-  const copyBtn = document.getElementById('copyBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const charCount = document.getElementById('charCount');
-
-  // Tab click
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      currentType = tab.dataset.type;
-      hintEl.textContent = HINTS[currentType];
-    });
-  });
-
-  // Enable/disable button
   inputEl.addEventListener('input', () => {
     decodeBtn.disabled = !inputEl.value.trim();
   });
 
-  // Decode
   decodeBtn.addEventListener('click', async () => {
     const input = inputEl.value.trim();
     if (!input) return;
 
     decodeBtn.disabled = true;
-    decodeBtn.textContent = '[ PROCESSING... ]';
+    decodeBtn.textContent = '[ SCANNING... ]';
     decodeBtn.classList.add('loading');
     outputSection.classList.remove('visible');
-    autoExtractNotice.style.display = 'none';
+    detectedNotice.style.display = 'none';
     errorNotice.style.display = 'none';
     outputWrap.style.display = 'none';
 
@@ -478,17 +442,20 @@
       const res = await fetch('/decode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: currentType, input }),
+        body: JSON.stringify({ input }),
       });
       const data = await res.json();
 
       outputSection.classList.add('visible');
 
       if (data.error) {
-        errorNotice.textContent = '✖ ERROR: ' + data.error;
+        errorNotice.textContent = '✖  ' + data.error;
         errorNotice.style.display = 'flex';
       } else {
-        if (data.auto_extracted) autoExtractNotice.style.display = 'flex';
+        detectedType.textContent = 'DETECTED: ' + (data.detected_type || 'UNKNOWN');
+        detectedDetail.textContent = data.detected_detail || '';
+        detectedNotice.style.display = 'flex';
+
         outputEl.textContent = data.result;
         outputEl.classList.remove('error');
         charCount.textContent = data.result.length.toLocaleString() + ' chars';
@@ -496,7 +463,7 @@
       }
     } catch (e) {
       outputSection.classList.add('visible');
-      errorNotice.textContent = '✖ REQUEST FAILED: ' + e.message;
+      errorNotice.textContent = '✖  REQUEST FAILED: ' + e.message;
       errorNotice.style.display = 'flex';
     } finally {
       decodeBtn.disabled = false;
@@ -505,7 +472,6 @@
     }
   });
 
-  // Copy
   copyBtn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(outputEl.textContent);
     copyBtn.textContent = '[ COPIED! ]';
@@ -516,17 +482,15 @@
     }, 1500);
   });
 
-  // Clear
   clearBtn.addEventListener('click', () => {
     inputEl.value = '';
     decodeBtn.disabled = true;
     outputSection.classList.remove('visible');
-    autoExtractNotice.style.display = 'none';
+    detectedNotice.style.display = 'none';
     errorNotice.style.display = 'none';
     outputWrap.style.display = 'none';
   });
 
-  // Ctrl+Enter to decode
   inputEl.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') decodeBtn.click();
   });
