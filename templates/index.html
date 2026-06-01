@@ -317,6 +317,94 @@
       margin-left: auto;
     }
 
+    .layers-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .layers-badge {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border: 1px solid rgba(255,200,0,0.4);
+      border-radius: 2px;
+      color: var(--gold);
+      background: rgba(255,200,0,0.06);
+    }
+
+    .layer-block {
+      border: 1px solid rgba(0,255,200,0.10);
+      border-radius: 3px;
+      padding: 12px 14px;
+      background: rgba(0,255,200,0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .layer-block + .layer-block {
+      margin-top: 6px;
+    }
+
+    .layer-arrow {
+      text-align: center;
+      color: rgba(0,255,200,0.25);
+      font-size: 14px;
+      line-height: 1;
+      margin: 2px 0;
+      user-select: none;
+    }
+
+    .layer-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .layer-num {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(0,255,200,0.3);
+      font-family: 'Orbitron', monospace;
+    }
+
+    .layer-type {
+      font-size: 10px;
+      letter-spacing: 2px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      color: var(--neon);
+    }
+
+    .layer-detail {
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: rgba(0,255,200,0.4);
+    }
+
+    .layer-block.final-layer {
+      border-color: rgba(0,255,200,0.28);
+      background: rgba(0,255,200,0.04);
+    }
+
+    pre.layer-output {
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--neon);
+      background: rgba(0,255,200,0.03);
+      border: 1px solid rgba(0,255,200,0.12);
+      padding: 10px 12px;
+      border-radius: 2px;
+    }
+
     footer {
       margin-top: 32px;
       font-size: 10px;
@@ -385,19 +473,11 @@
 
     <!-- Output -->
     <div class="output-section" id="outputSection">
-      <div class="notice detected" id="detectedNotice" style="display:none">
-        <span class="notice-icon">⚡</span>
-        <div class="notice-body">
-          <span class="notice-type" id="detectedType"></span>
-          <span class="notice-detail" id="detectedDetail"></span>
-        </div>
-      </div>
       <div class="notice error" id="errorNotice" style="display:none"></div>
       <div id="outputWrap" style="display:none">
-        <div class="label">DECODED OUTPUT</div>
-        <pre class="output-box" id="output"></pre>
-        <div class="output-actions">
-          <button class="btn-small" id="copyBtn">[ COPY ]</button>
+        <div id="layersContainer"></div>
+        <div class="output-actions" style="margin-top:10px">
+          <button class="btn-small" id="copyBtn">[ COPY FINAL ]</button>
           <button class="btn-small" id="clearBtn">[ CLEAR ]</button>
           <span class="char-count" id="charCount"></span>
         </div>
@@ -409,22 +489,77 @@
 </div>
 
 <script>
-  const inputEl        = document.getElementById('input');
-  const decodeBtn      = document.getElementById('decodeBtn');
-  const outputSection  = document.getElementById('outputSection');
-  const detectedNotice = document.getElementById('detectedNotice');
-  const detectedType   = document.getElementById('detectedType');
-  const detectedDetail = document.getElementById('detectedDetail');
-  const errorNotice    = document.getElementById('errorNotice');
-  const outputWrap     = document.getElementById('outputWrap');
-  const outputEl       = document.getElementById('output');
-  const copyBtn        = document.getElementById('copyBtn');
-  const clearBtn       = document.getElementById('clearBtn');
-  const charCount      = document.getElementById('charCount');
+  const inputEl       = document.getElementById('input');
+  const decodeBtn     = document.getElementById('decodeBtn');
+  const outputSection = document.getElementById('outputSection');
+  const errorNotice   = document.getElementById('errorNotice');
+  const outputWrap    = document.getElementById('outputWrap');
+  const layersCont    = document.getElementById('layersContainer');
+  const copyBtn       = document.getElementById('copyBtn');
+  const clearBtn      = document.getElementById('clearBtn');
+  const charCount     = document.getElementById('charCount');
+
+  let finalResult = '';
 
   inputEl.addEventListener('input', () => {
     decodeBtn.disabled = !inputEl.value.trim();
   });
+
+  function renderLayers(layers) {
+    layersCont.innerHTML = '';
+    const multi = layers.length > 1;
+
+    if (multi) {
+      const hdr = document.createElement('div');
+      hdr.className = 'layers-header';
+      hdr.innerHTML = `<span class="label" style="margin-bottom:0">DECODE CHAIN</span><span class="layers-badge">⚡ ${layers.length} LAYERS DETECTED</span>`;
+      layersCont.appendChild(hdr);
+    }
+
+    layers.forEach((layer, i) => {
+      const isFinal = i === layers.length - 1;
+
+      if (multi && i > 0) {
+        const arrow = document.createElement('div');
+        arrow.className = 'layer-arrow';
+        arrow.textContent = '▼';
+        layersCont.appendChild(arrow);
+      }
+
+      const block = document.createElement('div');
+      block.className = 'layer-block' + (isFinal ? ' final-layer' : '');
+
+      const tag = document.createElement('div');
+      tag.className = 'layer-tag';
+      tag.innerHTML = `
+        ${multi ? `<span class="layer-num">LAYER ${i + 1}</span>` : ''}
+        <span class="layer-type">⚡ ${layer.detected_type || 'UNKNOWN'}</span>
+        ${layer.detected_detail ? `<span class="layer-detail">${layer.detected_detail}</span>` : ''}
+      `;
+      block.appendChild(tag);
+
+      const pre = document.createElement('pre');
+      pre.className = 'layer-output';
+      pre.textContent = layer.result;
+      block.appendChild(pre);
+
+      const copyLayerBtn = document.createElement('button');
+      copyLayerBtn.className = 'btn-small';
+      copyLayerBtn.textContent = '[ COPY ]';
+      copyLayerBtn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(layer.result);
+        copyLayerBtn.textContent = '[ COPIED! ]';
+        copyLayerBtn.classList.add('success');
+        setTimeout(() => {
+          copyLayerBtn.textContent = '[ COPY ]';
+          copyLayerBtn.classList.remove('success');
+        }, 1500);
+      });
+      block.appendChild(copyLayerBtn);
+
+      layersCont.appendChild(block);
+    });
+  }
 
   decodeBtn.addEventListener('click', async () => {
     const input = inputEl.value.trim();
@@ -434,9 +569,10 @@
     decodeBtn.textContent = '[ SCANNING... ]';
     decodeBtn.classList.add('loading');
     outputSection.classList.remove('visible');
-    detectedNotice.style.display = 'none';
     errorNotice.style.display = 'none';
     outputWrap.style.display = 'none';
+    layersCont.innerHTML = '';
+    finalResult = '';
 
     try {
       const res = await fetch('/decode', {
@@ -452,13 +588,14 @@
         errorNotice.textContent = '✖  ' + data.error;
         errorNotice.style.display = 'flex';
       } else {
-        detectedType.textContent = 'DETECTED: ' + (data.detected_type || 'UNKNOWN');
-        detectedDetail.textContent = data.detected_detail || '';
-        detectedNotice.style.display = 'flex';
-
-        outputEl.textContent = data.result;
-        outputEl.classList.remove('error');
-        charCount.textContent = data.result.length.toLocaleString() + ' chars';
+        const layers = data.layers || [{
+          result: data.result,
+          detected_type: data.detected_type,
+          detected_detail: data.detected_detail,
+        }];
+        renderLayers(layers);
+        finalResult = layers[layers.length - 1].result;
+        charCount.textContent = finalResult.length.toLocaleString() + ' chars';
         outputWrap.style.display = 'block';
       }
     } catch (e) {
@@ -473,11 +610,12 @@
   });
 
   copyBtn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(outputEl.textContent);
+    if (!finalResult) return;
+    await navigator.clipboard.writeText(finalResult);
     copyBtn.textContent = '[ COPIED! ]';
     copyBtn.classList.add('success');
     setTimeout(() => {
-      copyBtn.textContent = '[ COPY ]';
+      copyBtn.textContent = '[ COPY FINAL ]';
       copyBtn.classList.remove('success');
     }, 1500);
   });
@@ -486,9 +624,10 @@
     inputEl.value = '';
     decodeBtn.disabled = true;
     outputSection.classList.remove('visible');
-    detectedNotice.style.display = 'none';
     errorNotice.style.display = 'none';
     outputWrap.style.display = 'none';
+    layersCont.innerHTML = '';
+    finalResult = '';
   });
 
   inputEl.addEventListener('keydown', e => {
