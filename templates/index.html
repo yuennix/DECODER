@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeDad — Code Decoder</title>
+  <link rel="icon" href="/static/favicon.ico" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --neon: #00ffc8;
+      --neon-dim: rgba(0,255,200,0.35);
+      --neon-faint: rgba(0,255,200,0.07);
+      --purple: #8000ff;
+      --purple-dim: rgba(128,0,255,0.35);
+      --bg: #060010;
+      --bg2: #0a001a;
+      --gold: #ffc800;
+      --red: #ff4050;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      overflow-x: hidden;
+    }
+
+    /* Scanlines */
+    body::before {
+      content: '';
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+    }
+
+    /* Animated background grid */
+    body::after {
+      content: '';
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,255,200,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,200,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 40px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 16px;
+      border-bottom: 1px solid rgba(0,255,200,0.12);
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--neon), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      box-shadow: 0 0 16px rgba(0,255,200,0.45), 0 0 32px rgba(128,0,255,0.2);
+    }
+
+    .logo-icon svg { width: 18px; height: 18px; color: #000; }
+
+    .logo-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: var(--neon);
+      text-shadow: 0 0 12px rgba(0,255,200,0.7);
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--neon-dim);
+      margin-top: 2px;
+    }
+
+    .by {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(128,0,255,0.4);
+      text-transform: uppercase;
+    }
+
+    /* ── ASCII art ── */
+    .ascii {
+      font-size: 9px;
+      line-height: 1.35;
+      color: rgba(0,255,200,0.18);
+      white-space: pre;
+      user-select: none;
+      text-align: center;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: rgba(0,255,200,0.02);
+      border: 1px solid rgba(0,255,200,0.14);
+      border-radius: 4px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      box-shadow: 0 0 60px rgba(0,255,200,0.04), 0 0 120px rgba(128,0,255,0.04);
+    }
+
+    /* ── Section label ── */
+    .label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--neon-dim);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .label::before { content: '▶'; font-size: 8px; color: var(--neon); }
+
+    /* ── Type tabs ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      flex: 1;
+      min-width: 80px;
+      padding: 8px 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid rgba(0,255,200,0.12);
+      color: rgba(0,255,200,0.3);
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .tab:hover {
+      border-color: rgba(0,255,200,0.35);
+      color: rgba(0,255,200,0.7);
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, rgba(0,255,200,0.12), rgba(128,0,255,0.12));
+      border-color: rgba(0,255,200,0.55);
+      color: var(--neon);
+      text-shadow: 0 0 8px rgba(0,255,200,0.5);
+      box-shadow: 0 0 12px rgba(0,255,200,0.08);
+    }
+
+    /* ── Hint ── */
+    .hint {
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: rgba(0,255,200,0.28);
+      margin-top: -12px;
+    }
+
+    /* ── Textarea / pre ── */
+    textarea, pre.output-box {
+      width: 100%;
+      background: rgba(0,255,200,0.03);
+      border: 1px solid rgba(0,255,200,0.18);
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 14px;
+      border-radius: 2px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea {
+      height: 120px;
+      min-height: 80px;
+    }
+
+    textarea::placeholder { color: rgba(0,255,200,0.2); }
+
+    textarea:focus {
+      border-color: rgba(0,255,200,0.45);
+      box-shadow: 0 0 0 2px rgba(0,255,200,0.06);
+    }
+
+    /* ── Decode button ── */
+    .btn-decode {
+      width: 100%;
+      padding: 14px;
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(0,255,200,0.14), rgba(128,0,255,0.14));
+      border: 1px solid rgba(0,255,200,0.45);
+      color: var(--neon);
+      border-radius: 2px;
+      text-shadow: 0 0 10px rgba(0,255,200,0.6);
+      box-shadow: 0 0 24px rgba(0,255,200,0.08), inset 0 0 24px rgba(0,255,200,0.04);
+      transition: all 0.15s;
+    }
+
+    .btn-decode:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(0,255,200,0.22), rgba(128,0,255,0.22));
+      border-color: rgba(0,255,200,0.7);
+      box-shadow: 0 0 40px rgba(0,255,200,0.15), inset 0 0 24px rgba(0,255,200,0.07);
+    }
+
+    .btn-decode:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-decode.loading {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Output ── */
+    .output-section { display: none; flex-direction: column; gap: 10px; }
+    .output-section.visible { display: flex; }
+
+    .notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      border-radius: 2px;
+    }
+
+    .notice.auto-extract {
+      border: 1px solid rgba(255,200,0,0.35);
+      background: rgba(255,200,0,0.05);
+      color: var(--gold);
+    }
+
+    .notice.error {
+      border: 1px solid rgba(255,64,80,0.4);
+      background: rgba(255,64,80,0.06);
+      color: var(--red);
+    }
+
+    pre.output-box {
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      resize: none;
+    }
+
+    pre.output-box.error {
+      border-color: rgba(255,64,80,0.35);
+      color: var(--red);
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-small {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid rgba(0,255,200,0.22);
+      color: rgba(0,255,200,0.45);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .btn-small:hover {
+      border-color: rgba(0,255,200,0.5);
+      color: var(--neon);
+    }
+
+    .btn-small.success { color: var(--neon); border-color: rgba(0,255,200,0.6); }
+
+    .char-count {
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: rgba(0,255,200,0.25);
+      margin-left: auto;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 32px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(0,255,200,0.15);
+      text-align: center;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,255,200,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,255,200,0.4); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">DeDad</div>
+        <div class="logo-sub">// CODE DECODER</div>
+      </div>
+    </div>
+    <span class="by">MADE BY DOUBLE</span>
+  </header>
+
+  <pre class="ascii">
+  ____       ____            _ 
+ |  _ \  ___|  _ \  __ _  __| |
+ | | | |/ _ \ | | |/ _` |/ _` |
+ | |_| |  __/ |_| | (_| | (_| |
+ |____/ \___|____/ \__,_|\__,_|</pre>
+
+  <div class="card">
+    <!-- Type selector -->
+    <div>
+      <div class="label">DECODING TYPE</div>
+      <div class="tabs">
+        <button class="tab active" data-type="base64">Base64</button>
+        <button class="tab" data-type="url">URL Enc</button>
+        <button class="tab" data-type="hex">Hexadecimal</button>
+        <button class="tab" data-type="zlib">Zlib</button>
+        <button class="tab" data-type="bzip2">Bzip2</button>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">⚡ Auto-detects and extracts payload from obfuscated Python files</p>
+
+    <!-- Input -->
+    <div>
+      <div class="label">INPUT DATA</div>
+      <textarea id="input" placeholder="Paste encoded text or full obfuscated Python file here..."></textarea>
+    </div>
+
+    <!-- Button -->
+    <button class="btn-decode" id="decodeBtn" disabled>[ EXECUTE DECODE ]</button>
+
+    <!-- Output -->
+    <div class="output-section" id="outputSection">
+      <div class="notice auto-extract" id="autoExtractNotice" style="display:none">
+        ⚡ AUTO-EXTRACTED BASE64 PAYLOAD FROM OBFUSCATED PYTHON FILE
+      </div>
+      <div class="notice error" id="errorNotice" style="display:none"></div>
+      <div id="outputWrap" style="display:none">
+        <div class="label">DECODED OUTPUT</div>
+        <pre class="output-box" id="output"></pre>
+        <div class="output-actions">
+          <button class="btn-small" id="copyBtn">[ COPY ]</button>
+          <button class="btn-small" id="clearBtn">[ CLEAR ]</button>
+          <span class="char-count" id="charCount"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>DEDAD v2.0 // CLIENT-SERVER DECODER // ALL FORMATS SUPPORTED</footer>
+</div>
+
+<script>
+  const HINTS = {
+    base64: '⚡ Auto-detects and extracts payload from obfuscated Python files',
+    url: '// Decodes percent-encoded (%XX) and + characters',
+    hex: '// Converts hexadecimal string to readable text',
+    zlib: '// Decompresses Base64-encoded Zlib streams (server-side)',
+    bzip2: '// Decompresses Base64-encoded Bzip2 data (server-side)',
+  };
+
+  let currentType = 'base64';
+
+  const inputEl = document.getElementById('input');
+  const hintEl = document.getElementById('hint');
+  const decodeBtn = document.getElementById('decodeBtn');
+  const outputSection = document.getElementById('outputSection');
+  const autoExtractNotice = document.getElementById('autoExtractNotice');
+  const errorNotice = document.getElementById('errorNotice');
+  const outputWrap = document.getElementById('outputWrap');
+  const outputEl = document.getElementById('output');
+  const copyBtn = document.getElementById('copyBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const charCount = document.getElementById('charCount');
+
+  // Tab click
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentType = tab.dataset.type;
+      hintEl.textContent = HINTS[currentType];
+    });
+  });
+
+  // Enable/disable button
+  inputEl.addEventListener('input', () => {
+    decodeBtn.disabled = !inputEl.value.trim();
+  });
+
+  // Decode
+  decodeBtn.addEventListener('click', async () => {
+    const input = inputEl.value.trim();
+    if (!input) return;
+
+    decodeBtn.disabled = true;
+    decodeBtn.textContent = '[ PROCESSING... ]';
+    decodeBtn.classList.add('loading');
+    outputSection.classList.remove('visible');
+    autoExtractNotice.style.display = 'none';
+    errorNotice.style.display = 'none';
+    outputWrap.style.display = 'none';
+
+    try {
+      const res = await fetch('/decode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: currentType, input }),
+      });
+      const data = await res.json();
+
+      outputSection.classList.add('visible');
+
+      if (data.error) {
+        errorNotice.textContent = '✖ ERROR: ' + data.error;
+        errorNotice.style.display = 'flex';
+      } else {
+        if (data.auto_extracted) autoExtractNotice.style.display = 'flex';
+        outputEl.textContent = data.result;
+        outputEl.classList.remove('error');
+        charCount.textContent = data.result.length.toLocaleString() + ' chars';
+        outputWrap.style.display = 'block';
+      }
+    } catch (e) {
+      outputSection.classList.add('visible');
+      errorNotice.textContent = '✖ REQUEST FAILED: ' + e.message;
+      errorNotice.style.display = 'flex';
+    } finally {
+      decodeBtn.disabled = false;
+      decodeBtn.textContent = '[ EXECUTE DECODE ]';
+      decodeBtn.classList.remove('loading');
+    }
+  });
+
+  // Copy
+  copyBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(outputEl.textContent);
+    copyBtn.textContent = '[ COPIED! ]';
+    copyBtn.classList.add('success');
+    setTimeout(() => {
+      copyBtn.textContent = '[ COPY ]';
+      copyBtn.classList.remove('success');
+    }, 1500);
+  });
+
+  // Clear
+  clearBtn.addEventListener('click', () => {
+    inputEl.value = '';
+    decodeBtn.disabled = true;
+    outputSection.classList.remove('visible');
+    autoExtractNotice.style.display = 'none';
+    errorNotice.style.display = 'none';
+    outputWrap.style.display = 'none';
+  });
+
+  // Ctrl+Enter to decode
+  inputEl.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') decodeBtn.click();
+  });
+</script>
+</body>
+</html>
