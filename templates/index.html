@@ -195,6 +195,38 @@
 
     textarea::placeholder { color: rgba(0,255,200,0.18); }
 
+    .btn-upload {
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--gold);
+      border: 1px solid rgba(255,200,0,0.40);
+      background: rgba(255,200,0,0.06);
+      padding: 5px 10px;
+      border-radius: 2px;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-upload:hover {
+      background: rgba(255,200,0,0.14);
+      border-color: rgba(255,200,0,0.70);
+    }
+
+    .truncation-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(255,100,0,0.10);
+      border: 1px solid rgba(255,100,0,0.55);
+      color: #ff8040;
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 10px 14px;
+      border-radius: 2px;
+      margin-top: 10px;
+    }
+
     textarea:focus {
       border-color: rgba(0,255,200,0.45);
       box-shadow: 0 0 0 2px rgba(0,255,200,0.06);
@@ -464,8 +496,12 @@
 
     <!-- Input -->
     <div>
-      <div class="label">INPUT — PASTE OBFUSCATED CODE</div>
-      <textarea id="input" placeholder="Paste any obfuscated code, encoded string, or full Python file here...&#10;&#10;Supports: XOR ciphers, exec(base64.b64decode(...)), URL encoding, hex, zlib, bzip2, ROT13, and more."></textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="label" style="margin-bottom:0">INPUT — PASTE OR UPLOAD FILE</div>
+        <label for="fileUpload" class="btn-upload" title="Upload a .py or .txt file — avoids copy-paste truncation">[ UPLOAD FILE ]</label>
+        <input type="file" id="fileUpload" accept=".py,.txt,.enc,.b64,text/*" style="display:none" />
+      </div>
+      <textarea id="input" placeholder="Paste any obfuscated code, encoded string, or full Python file here...&#10;&#10;Supports: XOR ciphers, exec(base64.b64decode(...)), URL encoding, hex, zlib, bzip2, ROT13, and more.&#10;&#10;TIP: Use [ UPLOAD FILE ] above to avoid truncation from long pastes."></textarea>
     </div>
 
     <!-- Button -->
@@ -498,11 +534,24 @@
   const copyBtn       = document.getElementById('copyBtn');
   const clearBtn      = document.getElementById('clearBtn');
   const charCount     = document.getElementById('charCount');
+  const fileUpload    = document.getElementById('fileUpload');
 
   let finalResult = '';
 
   inputEl.addEventListener('input', () => {
     decodeBtn.disabled = !inputEl.value.trim();
+  });
+
+  fileUpload.addEventListener('change', () => {
+    const file = fileUpload.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      inputEl.value = e.target.result;
+      decodeBtn.disabled = false;
+      fileUpload.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
   });
 
   function renderLayers(layers) {
@@ -556,6 +605,13 @@
         }, 1500);
       });
       block.appendChild(copyLayerBtn);
+
+      if (layer.truncation_warning) {
+        const warn = document.createElement('div');
+        warn.className = 'truncation-warning';
+        warn.innerHTML = `<span style="font-size:16px;flex-shrink:0">⚠️</span><span>${layer.truncation_warning.replace('⚠️  ', '')}</span>`;
+        block.appendChild(warn);
+      }
 
       layersCont.appendChild(block);
     });
