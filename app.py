@@ -472,13 +472,20 @@ def auto_detect_and_decode(text: str):
         pass
 
     # ── 8. ROT13 ────────────────────────────────────────────────────────────
-    try:
-        result = codecs.decode(text_stripped, 'rot_13')
-        if looks_readable(result) and result != text_stripped:
-            if re.search(r'\b[a-zA-Z]{3,}\b', result):
-                return result, 'ROT13', 'Caesar rotation (13)', None
-    except Exception:
-        pass
+    # Skip ROT13 if the input already contains Python keywords — valid Python
+    # should never be ROT13-decoded (it would only scramble it further).
+    _PY_KW = re.compile(
+        r'\b(?:import|from|def|class|return|print|exec|eval|if|else|elif'
+        r'|for|while|try|except|with|pass|break|continue|lambda|yield|raise|assert)\b'
+    )
+    if not _PY_KW.search(text_stripped):
+        try:
+            result = codecs.decode(text_stripped, 'rot_13')
+            if looks_readable(result) and result != text_stripped:
+                if re.search(r'\b[a-zA-Z]{3,}\b', result):
+                    return result, 'ROT13', 'Caesar rotation (13)', None
+        except Exception:
+            pass
 
     # ── 8b. ROT47 ────────────────────────────────────────────────────────────
     # Rotates all printable ASCII characters (33–126) by 47
@@ -649,12 +656,20 @@ def decode():
         max_layers = 6
         seen = set()
 
+        _PLAINTEXT_DONE = re.compile(
+            r'\b(?:import|from|def|class|return|print|exec|eval|if |else:|elif |'
+            r'for |while |try:|except |with |pass|break|continue|lambda |yield|raise|assert)\b'
+        )
+
         for _ in range(max_layers):
-            if current in seen:
+            key = current.strip()
+            if key in seen:
                 break
-            seen.add(current)
+            seen.add(key)
             result, detected_type, detected_detail, truncation_warning = auto_detect_and_decode(current)
             if result is None:
+                break
+            if result.strip() in seen:
                 break
             layers.append({
                 "result": result,
@@ -663,6 +678,9 @@ def decode():
                 "truncation_warning": truncation_warning,
             })
             current = result
+            # Stop as soon as the result looks like real plaintext / Python code
+            if _PLAINTEXT_DONE.search(result):
+                break
 
         if not layers:
             return jsonify({"error": "Could not detect encoding type. Input may be custom-encrypted or unknown format."}), 400
