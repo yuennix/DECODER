@@ -313,6 +313,7 @@ def auto_detect_and_decode(text: str):
             pass
 
     # ── 2c. Base64 URL-safe ──────────────────────────────────────────────────
+    b64_clean = re.sub(r'[\r\n\s]', '', text_stripped)
     urlsafe_m = re.search(r"urlsafe_b64decode\(b?['\"]([A-Za-z0-9_\-=\r\n]{8,})['\"]", text_stripped)
     if urlsafe_m:
         try:
@@ -352,10 +353,50 @@ def auto_detect_and_decode(text: str):
             pass
 
     # ── 2e. Base85 / ASCII85 ─────────────────────────────────────────────────
-    b85_m = re.search(r"b85decode\(b?['\"]([!-u]{8,})['\"]", text_stripped)
+    # Python b85 alphabet: 0-9 A-Z a-z ! # $ % & ( ) * + - ; < = > ? @ ^ _ ` { | } ~
+    _B85 = r"""[0-9A-Za-z!#$%&()*+\-;<=>?@^_`{|}~]"""
+
+    # zlib.decompress(base64.b85decode(...))
+    zlib_b85_m = re.search(
+        r"zlib\.decompress\s*\(\s*(?:base64\.)?b85decode\s*\(b?['\"](" + _B85 + r"{8,})['\"]",
+        text_stripped
+    )
+    if zlib_b85_m:
+        try:
+            raw = base64.b85decode(zlib_b85_m.group(1))
+            result = try_decode_bytes(zlib.decompress(raw))
+            if looks_readable(result, 0.55):
+                return result, 'Zlib + Base85', 'zlib.decompress(b85decode(...)) → plaintext', None
+        except Exception:
+            pass
+
+    # bz2.decompress(base64.b85decode(...))
+    bz2_b85_m = re.search(
+        r"bz2\.decompress\s*\(\s*(?:base64\.)?b85decode\s*\(b?['\"](" + _B85 + r"{8,})['\"]",
+        text_stripped
+    )
+    if bz2_b85_m:
+        try:
+            raw = base64.b85decode(bz2_b85_m.group(1))
+            result = try_decode_bytes(bz2.decompress(raw))
+            if looks_readable(result, 0.55):
+                return result, 'Bzip2 + Base85', 'bz2.decompress(b85decode(...)) → plaintext', None
+        except Exception:
+            pass
+
+    # plain b85decode(...) — also try zlib/bzip2 on the result
+    b85_m = re.search(r"b85decode\(b?['\"](" + _B85 + r"{8,})['\"]", text_stripped)
     if b85_m:
         try:
-            result = try_decode_bytes(base64.b85decode(b85_m.group(1)))
+            raw = base64.b85decode(b85_m.group(1))
+            for decomp, label in [(zlib.decompress, 'Base85 + Zlib'), (bz2.decompress, 'Base85 + Bzip2')]:
+                try:
+                    result = try_decode_bytes(decomp(raw))
+                    if looks_readable(result, 0.55):
+                        return result, label, 'b85decode + decompress → plaintext', None
+                except Exception:
+                    pass
+            result = try_decode_bytes(raw)
             if looks_readable(result, 0.60):
                 return result, 'Base85', 'b85decode → plaintext', None
         except Exception:
@@ -389,7 +430,6 @@ def auto_detect_and_decode(text: str):
             pass
 
     # ── 5. Plain Base64 ─────────────────────────────────────────────────────
-    b64_clean = re.sub(r'[\r\n\s]', '', text_stripped)
     if re.fullmatch(r'[A-Za-z0-9+/=]+', b64_clean) and len(b64_clean) >= 4:
         try:
             decoded_bytes = base64.b64decode(b64_clean)

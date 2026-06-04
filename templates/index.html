@@ -3,52 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DeDad — Code Decoder</title>
+  <title>DECRYPTOR — Code Decoder</title>
   <link rel="icon" href="/static/favicon.ico" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Fira+Code:wght@300;400;500;600&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --neon: #00ffc8;
-      --neon-dim: rgba(0,255,200,0.35);
-      --neon-faint: rgba(0,255,200,0.07);
-      --purple: #8000ff;
-      --purple-dim: rgba(128,0,255,0.35);
-      --bg: #060010;
-      --bg2: #0a001a;
-      --gold: #ffc800;
-      --red: #ff4050;
+      --green: #00ff41;
+      --green-dim: rgba(0,255,65,0.4);
+      --green-faint: rgba(0,255,65,0.06);
+      --green-glow: rgba(0,255,65,0.15);
+      --amber: #ffb000;
+      --red: #ff2020;
+      --red-dim: rgba(255,32,32,0.5);
+      --bg: #000000;
+      --bg2: #080808;
+      --bg3: #0d0d0d;
+      --border: rgba(0,255,65,0.18);
+      --border-bright: rgba(0,255,65,0.55);
     }
 
     html, body {
       min-height: 100vh;
       background: var(--bg);
-      color: var(--neon);
-      font-family: 'Share Tech Mono', monospace;
+      color: var(--green);
+      font-family: 'Fira Code', 'Share Tech Mono', monospace;
       overflow-x: hidden;
     }
 
+    /* CRT scanline overlay */
     body::before {
       content: '';
       pointer-events: none;
       position: fixed;
       inset: 0;
       z-index: 9999;
-      background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      animation: flicker 8s infinite;
     }
 
+    /* Vignette */
     body::after {
       content: '';
       pointer-events: none;
       position: fixed;
       inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(0,255,200,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,200,0.04) 1px, transparent 1px);
-      background-size: 40px 40px;
+      z-index: 9998;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.65) 100%);
+    }
+
+    @keyframes flicker {
+      0%, 95%, 100% { opacity: 1; }
+      96% { opacity: 0.92; }
+      97% { opacity: 1; }
+      98% { opacity: 0.95; }
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { text-shadow: 0 0 6px var(--green), 0 0 12px rgba(0,255,65,0.4); }
+      50% { text-shadow: 0 0 10px var(--green), 0 0 22px rgba(0,255,65,0.6), 0 0 40px rgba(0,255,65,0.2); }
+    }
+
+    @keyframes scan {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+
+    .scan-line {
+      pointer-events: none;
+      position: fixed;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,65,0.08), transparent);
+      z-index: 9997;
+      animation: scan 6s linear infinite;
     }
 
     .wrap {
@@ -58,503 +99,706 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 16px 40px;
+      padding: 0 16px 48px;
     }
 
+    /* ── HEADER ── */
     header {
       width: 100%;
-      max-width: 720px;
+      max-width: 760px;
+      padding: 18px 0 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .header-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 0 16px;
-      border-bottom: 1px solid rgba(0,255,200,0.12);
-      margin-bottom: 32px;
+      margin-bottom: 8px;
     }
 
-    .logo { display: flex; align-items: center; gap: 12px; }
-
-    .logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--neon), var(--purple));
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 4px;
-      box-shadow: 0 0 16px rgba(0,255,200,0.45), 0 0 32px rgba(128,0,255,0.2);
+    .sys-line {
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: rgba(0,255,65,0.65);
+      font-family: 'Fira Code', monospace;
     }
 
-    .logo-icon svg { width: 18px; height: 18px; color: #000; }
+    .sys-line span { color: #00ff41; }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-skull {
+      font-size: 32px;
+      line-height: 1;
+      filter: drop-shadow(0 0 8px rgba(0,255,65,0.6));
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
 
     .logo-text {
-      font-family: 'Orbitron', monospace;
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 4px;
-      color: var(--neon);
-      text-shadow: 0 0 12px rgba(0,255,200,0.7);
+      font-family: 'Fira Code', monospace;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: 6px;
+      color: var(--green);
+      text-shadow: 0 0 8px rgba(0,255,65,0.7), 0 0 20px rgba(0,255,65,0.3);
+      text-transform: uppercase;
     }
 
     .logo-sub {
-      font-size: 10px;
+      font-size: 12px;
       letter-spacing: 3px;
-      color: var(--neon-dim);
-      margin-top: 2px;
+      color: rgba(0,255,65,0.65);
+      margin-top: 3px;
+    }
+
+    .header-right {
+      text-align: right;
     }
 
     .by {
-      font-size: 10px;
+      font-size: 12px;
       letter-spacing: 2px;
-      color: rgba(128,0,255,0.4);
+      color: rgba(0,255,65,0.6);
       text-transform: uppercase;
     }
 
-    .ascii {
-      font-size: 9px;
-      line-height: 1.35;
-      color: rgba(0,255,200,0.18);
-      white-space: pre;
-      user-select: none;
-      text-align: center;
-      margin-bottom: 28px;
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--green);
+      margin-right: 6px;
+      animation: blink 1.4s step-end infinite;
+    }
+
+    .status-text {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: rgba(0,255,65,0.8);
+      text-transform: uppercase;
+    }
+
+    /* ── TERMINAL BOOT TEXT ── */
+    .boot-log {
+      width: 100%;
+      max-width: 760px;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      color: rgba(0,255,65,0.55);
+      line-height: 1.8;
+      margin-bottom: 16px;
+      padding: 8px 0;
+    }
+
+    .boot-log .ok { color: rgba(0,255,65,0.9); font-weight: 600; }
+    .boot-log .warn { color: rgba(255,176,0,0.9); font-weight: 600; }
+
+    /* ── CARD ── */
+    .card {
+      width: 100%;
+      max-width: 760px;
+      background: var(--bg2);
+      border: 1px solid rgba(0,255,65,0.3);
+      border-radius: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      box-shadow: 0 0 0 1px rgba(0,255,65,0.06), 0 0 40px rgba(0,255,65,0.06);
       overflow: hidden;
     }
 
-    .card {
-      width: 100%;
-      max-width: 720px;
-      background: rgba(0,255,200,0.02);
-      border: 1px solid rgba(0,255,200,0.14);
-      border-radius: 4px;
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
-      box-shadow: 0 0 60px rgba(0,255,200,0.04), 0 0 120px rgba(128,0,255,0.04);
-    }
-
-    .label {
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: var(--neon-dim);
-      text-transform: uppercase;
+    /* Terminal window title bar */
+    .term-bar {
+      background: rgba(0,255,65,0.08);
+      border-bottom: 1px solid rgba(0,255,65,0.25);
+      padding: 8px 16px;
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-bottom: 8px;
     }
-    .label::before { content: '▶'; font-size: 8px; color: var(--neon); }
 
-    /* ── Supported formats strip ── */
+    .term-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .term-dot.red { background: #ff5f56; }
+    .term-dot.yellow { background: #ffbd2e; }
+    .term-dot.green { background: #27c93f; box-shadow: 0 0 6px rgba(0,255,65,0.5); }
+
+    .term-title {
+      margin-left: 8px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: rgba(0,255,65,0.7);
+      text-transform: uppercase;
+    }
+
+    .term-cursor {
+      display: inline-block;
+      width: 8px; height: 13px;
+      background: var(--green);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    .card-body {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── FORMATS STRIP ── */
+    .section-label {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: rgba(0,255,65,0.75);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::before {
+      content: '>';
+      color: var(--green);
+      font-size: 13px;
+    }
+
     .formats-strip {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       padding: 12px 14px;
-      background: rgba(0,255,200,0.03);
-      border: 1px solid rgba(0,255,200,0.10);
-      border-radius: 2px;
+      background: rgba(0,255,65,0.03);
+      border: 1px solid rgba(0,255,65,0.18);
+      border-radius: 1px;
     }
 
     .fmt-badge {
-      font-size: 9px;
-      letter-spacing: 1.5px;
+      font-size: 11px;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      padding: 3px 8px;
-      border: 1px solid rgba(0,255,200,0.18);
-      border-radius: 2px;
-      color: rgba(0,255,200,0.4);
+      padding: 3px 9px;
+      border: 1px solid rgba(0,255,65,0.3);
+      border-radius: 1px;
+      color: rgba(0,255,65,0.7);
+      white-space: nowrap;
+      transition: all 0.1s;
+    }
+
+    .fmt-badge:hover {
+      border-color: rgba(0,255,65,0.7);
+      color: #00ff41;
+      background: rgba(0,255,65,0.06);
+    }
+
+    /* ── INPUT SECTION ── */
+    .input-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-ghost {
+      cursor: pointer;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 1px;
+      transition: all 0.12s;
       white-space: nowrap;
     }
 
-    .formats-label {
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: rgba(0,255,200,0.22);
-      text-transform: uppercase;
-      margin-bottom: 8px;
+    .btn-upload {
+      color: #ffb000;
+      border: 1px solid rgba(255,176,0,0.5);
+      background: rgba(255,176,0,0.06);
+    }
+    .btn-upload:hover {
+      color: #ffd040;
+      border-color: rgba(255,176,0,0.9);
+      background: rgba(255,176,0,0.12);
     }
 
-    textarea, pre.output-box {
-      width: 100%;
-      background: rgba(0,255,200,0.03);
-      border: 1px solid rgba(0,255,200,0.18);
-      color: var(--neon);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      padding: 14px;
-      border-radius: 2px;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+    .btn-clear-input {
+      color: #ff5555;
+      border: 1px solid rgba(255,50,50,0.45);
+      background: rgba(255,50,50,0.05);
+    }
+    .btn-clear-input:hover {
+      color: #ff2020;
+      border-color: rgba(255,50,50,0.8);
+      background: rgba(255,50,50,0.1);
+      box-shadow: 0 0 10px rgba(255,32,32,0.15);
+    }
+
+    .textarea-wrap {
+      position: relative;
     }
 
     textarea {
-      height: 160px;
-      min-height: 100px;
+      width: 100%;
+      height: 180px;
+      min-height: 120px;
+      background: #030303;
+      border: 1px solid rgba(0,255,65,0.3);
+      color: #00ff41;
+      font-family: 'Fira Code', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 14px 16px 32px;
+      border-radius: 1px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      caret-color: var(--green);
     }
 
-    textarea::placeholder { color: rgba(0,255,200,0.18); }
+    textarea::placeholder {
+      color: rgba(0,255,65,0.3);
+      font-style: normal;
+    }
 
-    .btn-upload {
-      cursor: pointer;
-      font-family: 'Share Tech Mono', monospace;
+    textarea:focus {
+      border-color: rgba(0,255,65,0.65);
+      box-shadow: 0 0 0 1px rgba(0,255,65,0.12), 0 0 20px rgba(0,255,65,0.06);
+    }
+
+    .textarea-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 5px 12px;
+      background: rgba(0,255,65,0.04);
+      border-top: 1px solid rgba(0,255,65,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .textarea-footer-left {
       font-size: 11px;
       letter-spacing: 1px;
-      color: var(--gold);
-      border: 1px solid rgba(255,200,0,0.40);
-      background: rgba(255,200,0,0.06);
-      padding: 5px 10px;
-      border-radius: 2px;
-      white-space: nowrap;
-      transition: background 0.15s, border-color 0.15s;
+      color: rgba(0,255,65,0.5);
+      text-transform: uppercase;
     }
-    .btn-upload:hover {
-      background: rgba(255,200,0,0.14);
-      border-color: rgba(255,200,0,0.70);
+
+    .textarea-char-count {
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: rgba(0,255,65,0.55);
     }
 
     .truncation-warning {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      background: rgba(255,100,0,0.10);
-      border: 1px solid rgba(255,100,0,0.55);
-      color: #ff8040;
-      font-size: 12px;
+      background: rgba(255,100,0,0.08);
+      border: 1px solid rgba(255,100,0,0.45);
+      color: #ff9040;
+      font-size: 13px;
       line-height: 1.6;
       padding: 10px 14px;
-      border-radius: 2px;
-      margin-top: 10px;
+      border-radius: 1px;
+      margin-top: 8px;
     }
 
-    textarea:focus {
-      border-color: rgba(0,255,200,0.45);
-      box-shadow: 0 0 0 2px rgba(0,255,200,0.06);
+    /* ── DECODE BUTTON ── */
+    .btn-decode-wrap {
+      position: relative;
     }
 
     .btn-decode {
       width: 100%;
-      padding: 14px;
-      font-family: 'Orbitron', monospace;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 4px;
+      padding: 15px 20px;
+      font-family: 'Fira Code', monospace;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 5px;
       text-transform: uppercase;
       cursor: pointer;
-      background: linear-gradient(135deg, rgba(0,255,200,0.14), rgba(128,0,255,0.14));
-      border: 1px solid rgba(0,255,200,0.45);
-      color: var(--neon);
-      border-radius: 2px;
-      text-shadow: 0 0 10px rgba(0,255,200,0.6);
-      box-shadow: 0 0 24px rgba(0,255,200,0.08), inset 0 0 24px rgba(0,255,200,0.04);
-      transition: all 0.15s;
+      background: rgba(0,255,65,0.06);
+      border: 1px solid rgba(0,255,65,0.6);
+      color: #00ff41;
+      border-radius: 1px;
+      text-shadow: 0 0 10px rgba(0,255,65,0.6);
+      box-shadow: 0 0 20px rgba(0,255,65,0.08), inset 0 0 20px rgba(0,255,65,0.03);
+      transition: all 0.12s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-decode::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,255,65,0.08), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.4s;
+    }
+
+    .btn-decode:hover:not(:disabled)::before {
+      transform: translateX(100%);
     }
 
     .btn-decode:hover:not(:disabled) {
-      background: linear-gradient(135deg, rgba(0,255,200,0.22), rgba(128,0,255,0.22));
-      border-color: rgba(0,255,200,0.7);
-      box-shadow: 0 0 40px rgba(0,255,200,0.15), inset 0 0 24px rgba(0,255,200,0.07);
+      background: rgba(0,255,65,0.1);
+      border-color: rgba(0,255,65,0.9);
+      box-shadow: 0 0 35px rgba(0,255,65,0.18), 0 0 70px rgba(0,255,65,0.08), inset 0 0 20px rgba(0,255,65,0.06);
+      text-shadow: 0 0 14px rgba(0,255,65,0.9), 0 0 28px rgba(0,255,65,0.5);
     }
 
     .btn-decode:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    .btn-decode.loading { animation: pulse 1s infinite; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
+    .btn-decode.loading {
+      animation: decode-pulse 0.8s ease-in-out infinite;
+      border-color: rgba(0,255,65,0.7);
     }
 
+    @keyframes decode-pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(0,255,65,0.12); }
+      50% { box-shadow: 0 0 50px rgba(0,255,65,0.3), 0 0 100px rgba(0,255,65,0.12); }
+    }
+
+    /* ── OUTPUT SECTION ── */
     .output-section { display: none; flex-direction: column; gap: 10px; }
     .output-section.visible { display: flex; }
 
     .notice {
       display: flex;
       align-items: flex-start;
-      gap: 8px;
-      padding: 10px 14px;
-      font-size: 10px;
+      gap: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
       letter-spacing: 1px;
-      border-radius: 2px;
+      border-radius: 1px;
       line-height: 1.6;
     }
 
-    .notice.detected {
-      border: 1px solid rgba(0,255,200,0.3);
-      background: rgba(0,255,200,0.05);
-      color: var(--neon);
-    }
-
     .notice.error {
-      border: 1px solid rgba(255,64,80,0.4);
-      background: rgba(255,64,80,0.06);
-      color: var(--red);
+      border: 1px solid rgba(255,32,32,0.5);
+      background: rgba(255,32,32,0.06);
+      color: #ff5555;
     }
 
-    .notice-icon { flex-shrink: 0; margin-top: 1px; }
+    .notice.error::before { content: '✖ '; }
 
-    .notice-body { display: flex; flex-direction: column; gap: 2px; }
-    .notice-type {
-      font-size: 11px;
-      letter-spacing: 2px;
-      font-family: 'Orbitron', monospace;
-      font-weight: 700;
-    }
-    .notice-detail { color: rgba(0,255,200,0.5); font-size: 10px; }
-
-    pre.output-box {
-      max-height: 320px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-      resize: none;
-    }
-
-    pre.output-box.error {
-      border-color: rgba(255,64,80,0.35);
-      color: var(--red);
-    }
-
-    .output-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .btn-small {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 6px 14px;
-      background: transparent;
-      border: 1px solid rgba(0,255,200,0.22);
-      color: rgba(0,255,200,0.45);
-      cursor: pointer;
-      border-radius: 2px;
-      transition: all 0.15s;
-    }
-
-    .btn-small:hover {
-      border-color: rgba(0,255,200,0.5);
-      color: var(--neon);
-    }
-
-    .btn-small.success { color: var(--neon); border-color: rgba(0,255,200,0.6); }
-
-    .char-count {
-      font-size: 10px;
-      letter-spacing: 1px;
-      color: rgba(0,255,200,0.25);
-      margin-left: auto;
-    }
-
-    .layers-header {
+    .output-header {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
     }
 
-    .layers-badge {
-      font-size: 9px;
+    .output-label {
+      font-size: 12px;
       letter-spacing: 2px;
+      color: rgba(0,255,65,0.75);
       text-transform: uppercase;
-      padding: 3px 9px;
-      border: 1px solid rgba(255,200,0,0.4);
-      border-radius: 2px;
-      color: var(--gold);
-      background: rgba(255,200,0,0.06);
     }
+
+    .output-label::before { content: '> '; color: var(--green); }
 
     .layer-block {
-      border: 1px solid rgba(0,255,200,0.10);
-      border-radius: 3px;
-      padding: 12px 14px;
-      background: rgba(0,255,200,0.02);
+      border: 1px solid rgba(0,255,65,0.2);
+      border-radius: 1px;
+      padding: 14px 16px;
+      background: #020202;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .layer-block + .layer-block {
-      margin-top: 6px;
-    }
-
-    .layer-arrow {
-      text-align: center;
-      color: rgba(0,255,200,0.25);
-      font-size: 14px;
-      line-height: 1;
-      margin: 2px 0;
-      user-select: none;
+    .layer-block.final-layer {
+      border-color: rgba(0,255,65,0.4);
+      background: #030303;
+      box-shadow: 0 0 20px rgba(0,255,65,0.04);
     }
 
     .layer-tag {
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .layer-num {
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: rgba(0,255,200,0.3);
-      font-family: 'Orbitron', monospace;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .layer-type {
-      font-size: 10px;
+      font-size: 13px;
       letter-spacing: 2px;
-      font-family: 'Orbitron', monospace;
-      font-weight: 700;
-      color: var(--neon);
+      font-weight: 600;
+      color: #00ff41;
+      text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(0,255,65,0.5);
     }
 
     .layer-detail {
-      font-size: 9px;
+      font-size: 12px;
       letter-spacing: 1px;
-      color: rgba(0,255,200,0.4);
+      color: rgba(0,255,65,0.65);
     }
 
-    .layer-block.final-layer {
-      border-color: rgba(0,255,200,0.28);
-      background: rgba(0,255,200,0.04);
+    .layers-peel-badge {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      padding: 3px 10px;
+      border: 1px solid rgba(255,176,0,0.55);
+      color: #ffb000;
+      background: rgba(255,176,0,0.06);
+      text-transform: uppercase;
     }
 
     pre.layer-output {
-      max-height: 220px;
+      max-height: 280px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      line-height: 1.6;
-      color: var(--neon);
-      background: rgba(0,255,200,0.03);
-      border: 1px solid rgba(0,255,200,0.12);
-      padding: 10px 12px;
-      border-radius: 2px;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #00ff41;
+      background: #000;
+      border: 1px solid rgba(0,255,65,0.2);
+      padding: 12px 14px;
+      border-radius: 1px;
     }
 
+    .output-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .btn-small {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      background: transparent;
+      border: 1px solid rgba(0,255,65,0.4);
+      color: rgba(0,255,65,0.75);
+      cursor: pointer;
+      border-radius: 1px;
+      transition: all 0.12s;
+    }
+
+    .btn-small:hover {
+      border-color: rgba(0,255,65,0.8);
+      color: #00ff41;
+      box-shadow: 0 0 10px rgba(0,255,65,0.1);
+    }
+
+    .btn-small.success {
+      color: #00ff41;
+      border-color: rgba(0,255,65,0.8);
+      text-shadow: 0 0 6px rgba(0,255,65,0.5);
+    }
+
+    .char-count {
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: rgba(0,255,65,0.55);
+      margin-left: auto;
+    }
+
+    /* ── FOOTER ── */
     footer {
-      margin-top: 32px;
-      font-size: 10px;
+      margin-top: 28px;
+      font-size: 11px;
       letter-spacing: 2px;
-      color: rgba(0,255,200,0.15);
+      color: rgba(0,255,65,0.35);
       text-align: center;
+      text-transform: uppercase;
     }
 
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(0,255,200,0.2); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(0,255,200,0.4); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,255,65,0.3); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,255,65,0.6); }
+
+    /* ── SELECTION ── */
+    ::selection { background: rgba(0,255,65,0.25); color: #00ff41; }
   </style>
 </head>
 <body>
+<div class="scan-line"></div>
 <div class="wrap">
+
   <header>
-    <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
+    <div class="header-top">
+      <div class="sys-line">root@decryptor:~# <span>./decode --mode=auto --layers=6</span></div>
+      <div class="sys-line"><span class="status-dot"></span><span class="status-text">SYSTEM ONLINE</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="logo">
+        <div class="logo-skull">☠</div>
+        <div>
+          <div class="logo-text">DECRYPTOR</div>
+          <div class="logo-sub">// CODE DE-OBFUSCATOR v3.0</div>
+        </div>
       </div>
-      <div>
-        <div class="logo-text">DeDad</div>
-        <div class="logo-sub">// CODE DECODER</div>
+      <div class="header-right">
+        <div class="by">by Double</div>
+        <div style="margin-top:4px;font-size:8px;letter-spacing:1.5px;color:rgba(0,255,65,0.2)">6 DECODE LAYERS</div>
       </div>
     </div>
-    <span class="by">MADE BY DOUBLE</span>
   </header>
 
-  <pre class="ascii">
-  ____       ____            _ 
- |  _ \  ___|  _ \  __ _  __| |
- | | | |/ _ \ | | |/ _` |/ _` |
- | |_| |  __/ |_| | (_| | (_| |
- |____/ \___|____/ \__,_|\__,_|</pre>
+  <div class="boot-log">
+    <div>[<span class="ok"> OK </span>] Loaded obfuscator signatures &nbsp;·&nbsp; lyrox / botpalys / marshal / inline-import</div>
+    <div>[<span class="ok"> OK </span>] Cipher modules ready &nbsp;·&nbsp; base64 / xor / rot13 / rot47 / caesar</div>
+    <div>[<span class="ok"> OK </span>] Compression engines armed &nbsp;·&nbsp; zlib / bzip2 / lzma</div>
+    <div>[<span class="warn">WARN</span>] Running in anonymous mode &nbsp;·&nbsp; no logs stored</div>
+  </div>
 
   <div class="card">
 
-    <!-- Supported formats -->
-    <div>
-      <div class="formats-label">⚡ AUTO-DETECTS ALL FORMATS — JUST PASTE AND DECODE</div>
-      <div class="formats-strip">
-        <span class="fmt-badge">Lyrox Obfuscator</span>
-        <span class="fmt-badge">Botpalys Obfuscator</span>
-        <span class="fmt-badge">Marshal Obfuscator</span>
-        <span class="fmt-badge">Inline Import Obfuscator</span>
-        <span class="fmt-badge">XOR + Base64</span>
-        <span class="fmt-badge">Obfuscated Python</span>
-        <span class="fmt-badge">String Reversal</span>
-        <span class="fmt-badge">Byte Array Literal</span>
-        <span class="fmt-badge">Hex Exec</span>
-        <span class="fmt-badge">Base64</span>
-        <span class="fmt-badge">Base64 URL-safe</span>
-        <span class="fmt-badge">Base32</span>
-        <span class="fmt-badge">Base85 / ASCII85</span>
-        <span class="fmt-badge">URL Encoding</span>
-        <span class="fmt-badge">Hexadecimal</span>
-        <span class="fmt-badge">Zlib</span>
-        <span class="fmt-badge">Bzip2</span>
-        <span class="fmt-badge">ROT13</span>
-        <span class="fmt-badge">ROT47</span>
-        <span class="fmt-badge">Caesar Cipher</span>
-        <span class="fmt-badge">Unicode Escape</span>
-        <span class="fmt-badge">Binary</span>
-        <span class="fmt-badge">Codecs Zlib / Bzip2</span>
-        <span class="fmt-badge">Octal Escape</span>
-      </div>
+    <!-- Terminal bar -->
+    <div class="term-bar">
+      <div class="term-dot red"></div>
+      <div class="term-dot yellow"></div>
+      <div class="term-dot green"></div>
+      <span class="term-title">decryptor_terminal — bash<div class="term-cursor" style="display:inline-block"></div></span>
     </div>
 
-    <!-- Input -->
-    <div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="label" style="margin-bottom:0">INPUT — PASTE OR UPLOAD FILE</div>
-        <label for="fileUpload" class="btn-upload" title="Upload a .py or .txt file — avoids copy-paste truncation">[ UPLOAD FILE ]</label>
-        <input type="file" id="fileUpload" accept=".py,.txt,.enc,.b64,text/*" style="display:none" />
-      </div>
-      <textarea id="input" placeholder="Paste any obfuscated code, encoded string, or full Python file here...&#10;&#10;Supports: XOR ciphers, exec(base64.b64decode(...)), URL encoding, hex, zlib, bzip2, ROT13, and more.&#10;&#10;TIP: Use [ UPLOAD FILE ] above to avoid truncation from long pastes."></textarea>
-    </div>
+    <div class="card-body">
 
-    <!-- Button -->
-    <button class="btn-decode" id="decodeBtn" disabled>[ EXECUTE DECODE ]</button>
-
-    <!-- Output -->
-    <div class="output-section" id="outputSection">
-      <div class="notice error" id="errorNotice" style="display:none"></div>
-      <div id="outputWrap" style="display:none">
-        <div id="layersContainer"></div>
-        <div class="output-actions" style="margin-top:10px">
-          <button class="btn-small" id="copyBtn">[ COPY FINAL ]</button>
-          <button class="btn-small" id="clearBtn">[ CLEAR ]</button>
-          <span class="char-count" id="charCount"></span>
+      <!-- Supported formats -->
+      <div>
+        <div class="section-label">SUPPORTED FORMATS — AUTO-DETECTED</div>
+        <div class="formats-strip">
+          <span class="fmt-badge">Lyrox</span>
+          <span class="fmt-badge">Botpalys</span>
+          <span class="fmt-badge">Marshal</span>
+          <span class="fmt-badge">Inline Import</span>
+          <span class="fmt-badge">XOR + Base64</span>
+          <span class="fmt-badge">Obfuscated Python</span>
+          <span class="fmt-badge">String Reversal</span>
+          <span class="fmt-badge">Byte Array</span>
+          <span class="fmt-badge">Hex Exec</span>
+          <span class="fmt-badge">Base64</span>
+          <span class="fmt-badge">Base64 URL-safe</span>
+          <span class="fmt-badge">Base32</span>
+          <span class="fmt-badge">Base85</span>
+          <span class="fmt-badge">ASCII85</span>
+          <span class="fmt-badge">URL Encoding</span>
+          <span class="fmt-badge">Hexadecimal</span>
+          <span class="fmt-badge">Zlib</span>
+          <span class="fmt-badge">Bzip2</span>
+          <span class="fmt-badge">ROT13</span>
+          <span class="fmt-badge">ROT47</span>
+          <span class="fmt-badge">Caesar</span>
+          <span class="fmt-badge">Unicode Escape</span>
+          <span class="fmt-badge">Binary</span>
+          <span class="fmt-badge">Octal Escape</span>
         </div>
       </div>
+
+      <!-- Input -->
+      <div>
+        <div class="input-header">
+          <div class="section-label" style="margin-bottom:0">INPUT — PASTE OR UPLOAD</div>
+          <div class="input-actions">
+            <button class="btn-ghost btn-clear-input" id="clearInputBtn" title="Clear input">[ CLEAR ALL ]</button>
+            <label for="fileUpload" class="btn-ghost btn-upload" title="Upload file">[  UPLOAD FILE ]</label>
+            <input type="file" id="fileUpload" accept=".py,.txt,.enc,.b64,text/*" style="display:none" />
+          </div>
+        </div>
+        <div class="textarea-wrap">
+          <textarea id="input" spellcheck="false" placeholder="$ paste obfuscated code here...&#10;&#10;  supports: exec(base64.b64decode(...)), XOR ciphers,&#10;  URL encoding, hex strings, zlib/bzip2, ROT13, and more.&#10;&#10;  tip: upload a file to avoid paste truncation"></textarea>
+          <div class="textarea-footer">
+            <span class="textarea-footer-left">ctrl+enter to decode</span>
+            <span class="textarea-char-count" id="inputCharCount">0 bytes</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decode button -->
+      <button class="btn-decode" id="decodeBtn" disabled>[ EXECUTE DECODE ]</button>
+
+      <!-- Output -->
+      <div class="output-section" id="outputSection">
+        <div class="notice error" id="errorNotice" style="display:none"></div>
+        <div id="outputWrap" style="display:none">
+          <div class="output-header">
+            <span class="output-label">DECODED OUTPUT</span>
+          </div>
+          <div id="layersContainer"></div>
+          <div class="output-actions">
+            <button class="btn-small" id="copyBtn">[ COPY RESULT ]</button>
+            <button class="btn-small" id="clearOutputBtn">[ CLEAR OUTPUT ]</button>
+            <span class="char-count" id="charCount"></span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <footer>DEDAD v3.0 // SMART AUTO-DECODER // ALL FORMATS SUPPORTED</footer>
+  <footer>DECRYPTOR v3.0 // SMART AUTO-DECODER // ALL FORMATS SUPPORTED // MADE BY DOUBLE</footer>
 </div>
 
 <script>
-  const inputEl       = document.getElementById('input');
-  const decodeBtn     = document.getElementById('decodeBtn');
-  const outputSection = document.getElementById('outputSection');
-  const errorNotice   = document.getElementById('errorNotice');
-  const outputWrap    = document.getElementById('outputWrap');
-  const layersCont    = document.getElementById('layersContainer');
-  const copyBtn       = document.getElementById('copyBtn');
-  const clearBtn      = document.getElementById('clearBtn');
-  const charCount     = document.getElementById('charCount');
-  const fileUpload    = document.getElementById('fileUpload');
+  const inputEl         = document.getElementById('input');
+  const decodeBtn       = document.getElementById('decodeBtn');
+  const outputSection   = document.getElementById('outputSection');
+  const errorNotice     = document.getElementById('errorNotice');
+  const outputWrap      = document.getElementById('outputWrap');
+  const layersCont      = document.getElementById('layersContainer');
+  const copyBtn         = document.getElementById('copyBtn');
+  const clearOutputBtn  = document.getElementById('clearOutputBtn');
+  const clearInputBtn   = document.getElementById('clearInputBtn');
+  const charCount       = document.getElementById('charCount');
+  const fileUpload      = document.getElementById('fileUpload');
+  const inputCharCount  = document.getElementById('inputCharCount');
 
   let finalResult = '';
 
+  function updateInputCount() {
+    const len = inputEl.value.length;
+    inputCharCount.textContent = len > 0 ? len.toLocaleString() + ' bytes' : '0 bytes';
+  }
+
   inputEl.addEventListener('input', () => {
     decodeBtn.disabled = !inputEl.value.trim();
+    updateInputCount();
+  });
+
+  clearInputBtn.addEventListener('click', () => {
+    inputEl.value = '';
+    decodeBtn.disabled = true;
+    updateInputCount();
+    outputSection.classList.remove('visible');
+    errorNotice.style.display = 'none';
+    outputWrap.style.display = 'none';
+    layersCont.innerHTML = '';
+    finalResult = '';
+    inputEl.focus();
   });
 
   fileUpload.addEventListener('change', () => {
@@ -564,6 +808,7 @@
     reader.onload = e => {
       inputEl.value = e.target.result;
       decodeBtn.disabled = false;
+      updateInputCount();
       fileUpload.value = '';
     };
     reader.readAsText(file, 'utf-8');
@@ -582,7 +827,7 @@
     tag.innerHTML = `
       <span class="layer-type">⚡ ${final.detected_type || 'UNKNOWN'}</span>
       ${final.detected_detail ? `<span class="layer-detail">${final.detected_detail}</span>` : ''}
-      ${layerCount > 1 ? `<span class="layer-detail">${layerCount} layers peeled</span>` : ''}
+      ${layerCount > 1 ? `<span class="layers-peel-badge">${layerCount} layers peeled</span>` : ''}
     `;
     block.appendChild(tag);
 
@@ -594,7 +839,7 @@
     if (final.truncation_warning) {
       const warn = document.createElement('div');
       warn.className = 'truncation-warning';
-      warn.innerHTML = `<span style="font-size:16px;flex-shrink:0">⚠️</span><span>${final.truncation_warning.replace('⚠️  ', '')}</span>`;
+      warn.innerHTML = `<span style="font-size:15px;flex-shrink:0">⚠</span><span>${final.truncation_warning.replace('⚠️  ', '')}</span>`;
       block.appendChild(warn);
     }
 
@@ -625,7 +870,7 @@
       outputSection.classList.add('visible');
 
       if (data.error) {
-        errorNotice.textContent = '✖  ' + data.error;
+        errorNotice.textContent = data.error;
         errorNotice.style.display = 'flex';
       } else {
         const layers = data.layers || [{
@@ -640,7 +885,7 @@
       }
     } catch (e) {
       outputSection.classList.add('visible');
-      errorNotice.textContent = '✖  REQUEST FAILED: ' + e.message;
+      errorNotice.textContent = 'REQUEST FAILED: ' + e.message;
       errorNotice.style.display = 'flex';
     } finally {
       decodeBtn.disabled = false;
@@ -655,14 +900,12 @@
     copyBtn.textContent = '[ COPIED! ]';
     copyBtn.classList.add('success');
     setTimeout(() => {
-      copyBtn.textContent = '[ COPY FINAL ]';
+      copyBtn.textContent = '[ COPY RESULT ]';
       copyBtn.classList.remove('success');
     }, 1500);
   });
 
-  clearBtn.addEventListener('click', () => {
-    inputEl.value = '';
-    decodeBtn.disabled = true;
+  clearOutputBtn.addEventListener('click', () => {
     outputSection.classList.remove('visible');
     errorNotice.style.display = 'none';
     outputWrap.style.display = 'none';
