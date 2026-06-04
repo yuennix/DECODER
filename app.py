@@ -98,7 +98,7 @@ def _disassemble_code(code_obj) -> str:
         if hasattr(obj, 'co_consts'):
             for c in obj.co_consts:
                 if isinstance(c, str) and len(c) > 4:
-                    consts.append(repr(c[:300]))
+                    consts.append(c[:500])
                 elif hasattr(c, 'co_consts'):
                     collect(c)
     collect(code_obj)
@@ -111,7 +111,7 @@ def _disassemble_code(code_obj) -> str:
     parts = []
     if consts:
         parts.append('# ── String constants extracted ──')
-        parts.extend(consts[:30])
+        parts.extend(consts[:50])
         parts.append('')
     if asm:
         parts.append('# ── Bytecode disassembly ──')
@@ -199,6 +199,81 @@ def auto_detect_and_decode(text: str):
                             pass
                 except Exception:
                     pass
+
+    # ── 0c2. Aliased-import obfuscator (AYAN-style) ─────────────────────────
+    # Pattern: import base64 as X, import zlib as Y, import marshal as Z
+    # exec(Z.loads(Y.decompress(X.b64decode(b'...'[::-1]))))
+    # Resolve all `import MODULE as ALIAS` declarations, then try every large
+    # bytes-literal payload with all reversal × decompression × decode combos.
+    _alias_map = {}
+    for _mod, _alias in re.findall(
+        r'import\s+(base64|zlib|bz2|lzma|marshal|binascii)\s+as\s+(\w+)',
+        text_stripped
+    ):
+        _alias_map[_alias] = _mod
+
+    if _alias_map:
+        # Collect all large bytes-literal payloads in the file
+        _byte_payloads = re.findall(
+            r"b['\"]([A-Za-z0-9+/=\r\n\s]{40,})['\"]",
+            text_stripped
+        )
+        # Also check for payloads after alias.b64decode(
+        for _alias, _mod in _alias_map.items():
+            if _mod == 'base64':
+                _m = re.search(
+                    _alias + r"""\.b64decode\s*\(\s*b['"]([A-Za-z0-9+/=\r\n\s]{40,})['"]""",
+                    text_stripped, re.DOTALL
+                )
+                if _m:
+                    _byte_payloads.insert(0, _m.group(1))
+
+        # Detect whether [::-1] reversal is used anywhere near a b64decode call
+        _uses_reversal = bool(re.search(r'\[::-1\]', text_stripped))
+
+        for _raw_payload in _byte_payloads:
+            _payload_clean = re.sub(r'[\r\n\s]', '', _raw_payload)
+            _variants = [_payload_clean]
+            if _uses_reversal:
+                _variants.insert(0, _payload_clean[::-1])
+            for _variant in _variants:
+                try:
+                    _decoded = base64.b64decode(_variant)
+                except Exception:
+                    continue
+                for _decomp in [zlib.decompress, bz2.decompress, lzma.decompress, lambda x: x]:
+                    try:
+                        _data = _decomp(_decoded)
+                    except Exception:
+                        continue
+                    # Try marshal (gives code object → extract strings + disasm)
+                    try:
+                        _code_obj = marshal.loads(_data)
+                        _result = _disassemble_code(_code_obj)
+                        if _result and _result != '# (empty code object)':
+                            return (
+                                _result,
+                                'Aliased-Import Obfuscator',
+                                'aliased imports + reversed base64 → marshal bytecode',
+                                None
+                            )
+                    except Exception:
+                        pass
+                    # Try plain text decode
+                    _PY_KW_CHK = re.compile(
+                        r'\b(?:import|from|def|class|return|exec|eval|for |while )\b'
+                    )
+                    try:
+                        _text = try_decode_bytes(_data)
+                        if looks_readable(_text, 0.65) and _PY_KW_CHK.search(_text):
+                            return (
+                                _text,
+                                'Aliased-Import Obfuscator',
+                                'aliased imports + reversed base64 → plaintext',
+                                None
+                            )
+                    except Exception:
+                        pass
 
     # ── 0d. exec('...'[::-1]) — reversed string ─────────────────────────────
     rev_exec = re.search(
