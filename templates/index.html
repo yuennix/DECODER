@@ -482,15 +482,30 @@
     <div>
       <div class="formats-label">⚡ AUTO-DETECTS ALL FORMATS — JUST PASTE AND DECODE</div>
       <div class="formats-strip">
+        <span class="fmt-badge">Lyrox Obfuscator</span>
+        <span class="fmt-badge">Botpalys Obfuscator</span>
+        <span class="fmt-badge">Marshal Obfuscator</span>
+        <span class="fmt-badge">Inline Import Obfuscator</span>
         <span class="fmt-badge">XOR + Base64</span>
         <span class="fmt-badge">Obfuscated Python</span>
+        <span class="fmt-badge">String Reversal</span>
+        <span class="fmt-badge">Byte Array Literal</span>
+        <span class="fmt-badge">Hex Exec</span>
         <span class="fmt-badge">Base64</span>
+        <span class="fmt-badge">Base64 URL-safe</span>
+        <span class="fmt-badge">Base32</span>
+        <span class="fmt-badge">Base85 / ASCII85</span>
         <span class="fmt-badge">URL Encoding</span>
         <span class="fmt-badge">Hexadecimal</span>
         <span class="fmt-badge">Zlib</span>
         <span class="fmt-badge">Bzip2</span>
         <span class="fmt-badge">ROT13</span>
+        <span class="fmt-badge">ROT47</span>
+        <span class="fmt-badge">Caesar Cipher</span>
         <span class="fmt-badge">Unicode Escape</span>
+        <span class="fmt-badge">Binary</span>
+        <span class="fmt-badge">Codecs Zlib / Bzip2</span>
+        <span class="fmt-badge">Octal Escape</span>
       </div>
     </div>
 
@@ -556,65 +571,34 @@
 
   function renderLayers(layers) {
     layersCont.innerHTML = '';
-    const multi = layers.length > 1;
+    const final = layers[layers.length - 1];
+    const layerCount = layers.length;
 
-    if (multi) {
-      const hdr = document.createElement('div');
-      hdr.className = 'layers-header';
-      hdr.innerHTML = `<span class="label" style="margin-bottom:0">DECODE CHAIN</span><span class="layers-badge">⚡ ${layers.length} LAYERS DETECTED</span>`;
-      layersCont.appendChild(hdr);
+    const block = document.createElement('div');
+    block.className = 'layer-block final-layer';
+
+    const tag = document.createElement('div');
+    tag.className = 'layer-tag';
+    tag.innerHTML = `
+      <span class="layer-type">⚡ ${final.detected_type || 'UNKNOWN'}</span>
+      ${final.detected_detail ? `<span class="layer-detail">${final.detected_detail}</span>` : ''}
+      ${layerCount > 1 ? `<span class="layer-detail">${layerCount} layers peeled</span>` : ''}
+    `;
+    block.appendChild(tag);
+
+    const pre = document.createElement('pre');
+    pre.className = 'layer-output';
+    pre.textContent = final.result;
+    block.appendChild(pre);
+
+    if (final.truncation_warning) {
+      const warn = document.createElement('div');
+      warn.className = 'truncation-warning';
+      warn.innerHTML = `<span style="font-size:16px;flex-shrink:0">⚠️</span><span>${final.truncation_warning.replace('⚠️  ', '')}</span>`;
+      block.appendChild(warn);
     }
 
-    layers.forEach((layer, i) => {
-      const isFinal = i === layers.length - 1;
-
-      if (multi && i > 0) {
-        const arrow = document.createElement('div');
-        arrow.className = 'layer-arrow';
-        arrow.textContent = '▼';
-        layersCont.appendChild(arrow);
-      }
-
-      const block = document.createElement('div');
-      block.className = 'layer-block' + (isFinal ? ' final-layer' : '');
-
-      const tag = document.createElement('div');
-      tag.className = 'layer-tag';
-      tag.innerHTML = `
-        ${multi ? `<span class="layer-num">LAYER ${i + 1}</span>` : ''}
-        <span class="layer-type">⚡ ${layer.detected_type || 'UNKNOWN'}</span>
-        ${layer.detected_detail ? `<span class="layer-detail">${layer.detected_detail}</span>` : ''}
-      `;
-      block.appendChild(tag);
-
-      const pre = document.createElement('pre');
-      pre.className = 'layer-output';
-      pre.textContent = layer.result;
-      block.appendChild(pre);
-
-      const copyLayerBtn = document.createElement('button');
-      copyLayerBtn.className = 'btn-small';
-      copyLayerBtn.textContent = '[ COPY ]';
-      copyLayerBtn.addEventListener('click', async () => {
-        await navigator.clipboard.writeText(layer.result);
-        copyLayerBtn.textContent = '[ COPIED! ]';
-        copyLayerBtn.classList.add('success');
-        setTimeout(() => {
-          copyLayerBtn.textContent = '[ COPY ]';
-          copyLayerBtn.classList.remove('success');
-        }, 1500);
-      });
-      block.appendChild(copyLayerBtn);
-
-      if (layer.truncation_warning) {
-        const warn = document.createElement('div');
-        warn.className = 'truncation-warning';
-        warn.innerHTML = `<span style="font-size:16px;flex-shrink:0">⚠️</span><span>${layer.truncation_warning.replace('⚠️  ', '')}</span>`;
-        block.appendChild(warn);
-      }
-
-      layersCont.appendChild(block);
-    });
+    layersCont.appendChild(block);
   }
 
   decodeBtn.addEventListener('click', async () => {
