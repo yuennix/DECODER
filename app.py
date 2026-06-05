@@ -178,6 +178,21 @@ def auto_detect_and_decode(text: str):
         except Exception:
             pass
 
+    # ── 0b2. Botpalys obfuscator (reversed Hex) ─────────────────────────────
+    # Pattern: _ = lambda __ : bytes.fromhex(__[::-1]); exec((_)('hexstring'))
+    botpalys_hex = re.search(
+        r"fromhex\(__\[::-1\]\).*?exec\(.*?\(['\"]([0-9a-fA-F\s]{20,})['\"]",
+        text_stripped, re.DOTALL
+    )
+    if botpalys_hex:
+        try:
+            payload = re.sub(r'\s', '', botpalys_hex.group(1))
+            result = try_decode_bytes(bytes.fromhex(payload[::-1]))
+            if looks_readable(result, 0.60):
+                return result, 'Botpalys Obfuscator', 'reversed Hex → plaintext Python', None
+        except Exception:
+            pass
+
     # ── 0c. Marshal-based obfuscation ──────────────────────────────────────
     # Patterns: exec(marshal.loads(...)), exec(compile(marshal.loads(...)))
     if 'marshal' in text_stripped and 'loads' in text_stripped:
@@ -380,12 +395,14 @@ def auto_detect_and_decode(text: str):
     # ── 2b. exec(bytes.fromhex('...').decode()) ─────────────────────────────
     fromhex_m = re.search(r"bytes\.fromhex\(['\"]([0-9A-Fa-f\s]{8,})['\"]", text_stripped)
     if fromhex_m:
-        try:
-            result = try_decode_bytes(bytes.fromhex(re.sub(r'\s', '', fromhex_m.group(1))))
-            if looks_readable(result, 0.60):
-                return result, 'Hex Exec', 'bytes.fromhex() → plaintext Python', None
-        except Exception:
-            pass
+        _hex_clean = re.sub(r'\s', '', fromhex_m.group(1))
+        for _hex_variant, _hex_label in [(_hex_clean, 'bytes.fromhex() → plaintext'), (_hex_clean[::-1], 'reversed bytes.fromhex() → plaintext')]:
+            try:
+                result = try_decode_bytes(bytes.fromhex(_hex_variant))
+                if looks_readable(result, 0.60):
+                    return result, 'Hex Exec', _hex_label, None
+            except Exception:
+                pass
 
     # ── 2c. Base64 URL-safe ──────────────────────────────────────────────────
     b64_clean = re.sub(r'[\r\n\s]', '', text_stripped)
