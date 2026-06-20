@@ -147,6 +147,113 @@ def auto_detect_and_decode(text: str):
     """Returns (result, detected_type, detected_detail, truncation_warning)."""
     text_stripped = text.strip()
 
+    # ── 0a0. AYRON ENC obfuscator ───────────────────────────────────────────
+    # Pattern: __import__('bz2').decompress etc. as aliases, raw bytes literal,
+    # sequential decode chain: bz2 → lzma → base64 → zlib → marshal.loads
+    if '__import__' in text_stripped and (
+        'AYRON' in text_stripped or 'decompress' in text_stripped
+    ):
+        try:
+            # 1. Build alias → (module, method) map
+            _ayron_aliases = {}  # alias_var → callable
+            _MODULE_MAP = {
+                'bz2': bz2, 'lzma': lzma, 'base64': base64,
+                'zlib': zlib, 'marshal': marshal,
+            }
+            for _mod_name, _method, _alias in re.findall(
+                r"(\w+)\s*=\s*__import__\(['\"](\w+)['\"]\)\.(\w+)",
+                text_stripped
+            ):
+                # group(1)=alias, group(2)=module, group(3)=method  — but our regex has 3 groups
+                pass  # use the next approach
+
+            _alias_fn = {}  # alias_name → callable
+            for m in re.finditer(
+                r"(\w+)\s*=\s*__import__\(['\"](\w+)['\"]\)\.(\w+)",
+                text_stripped
+            ):
+                _var, _mod, _meth = m.group(1), m.group(2), m.group(3)
+                _mod_obj = _MODULE_MAP.get(_mod)
+                if _mod_obj and hasattr(_mod_obj, _meth):
+                    _alias_fn[_var] = getattr(_mod_obj, _meth)
+
+            if not _alias_fn:
+                raise ValueError("no aliases found")
+
+            # 2. Find the raw bytes-literal payload variable
+            #    It's the only variable assigned a b'...' literal that isn't a short string
+            _payload_data = None
+            _payload_var = None
+            for m in re.finditer(
+                r"""^(\w+)\s*=\s*(b(?:\"\"\"[\s\S]*?\"\"\"|'''[\s\S]*?'''|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"))""",
+                text_stripped, re.MULTILINE
+            ):
+                _var_name = m.group(1)
+                try:
+                    _val = ast.literal_eval(m.group(2))
+                    if isinstance(_val, bytes) and len(_val) > 50:
+                        _payload_data = _val
+                        _payload_var = _var_name
+                        break
+                except Exception:
+                    pass
+
+            if _payload_data is None:
+                raise ValueError("no bytes payload found")
+
+            # 3. Trace the decode chain: sequential `var = alias(var)` calls
+            #    Collect in order of appearance
+            _chain_fns = []
+            for m in re.finditer(
+                r"^\s*" + re.escape(_payload_var) + r"\s*=\s*(\w+)\s*\(\s*" + re.escape(_payload_var) + r"\s*\)",
+                text_stripped, re.MULTILINE
+            ):
+                _fn_alias = m.group(1)
+                if _fn_alias in _alias_fn:
+                    _chain_fns.append((_fn_alias, _alias_fn[_fn_alias]))
+
+            if not _chain_fns:
+                raise ValueError("no decode chain found")
+
+            # Build a reverse map: alias → readable "module.method" label
+            _alias_label = {}
+            for m2 in re.finditer(
+                r"(\w+)\s*=\s*__import__\(['\"](\w+)['\"]\)\.(\w+)",
+                text_stripped
+            ):
+                _alias_label[m2.group(1)] = f"{m2.group(2)}.{m2.group(3)}"
+
+            # 4. Apply the chain in order
+            _data = _payload_data
+            _chain_labels = []
+            for _alias_name, _fn in _chain_fns:
+                _data = _fn(_data)
+                _chain_labels.append(_alias_label.get(_alias_name, _alias_name))
+
+            # 5. If chain ended with marshal.loads we have a code object
+            if hasattr(_data, 'co_consts'):
+                _result = _disassemble_code(_data)
+                _label = ' → '.join(_chain_labels) + ' → marshal'
+                return _result, 'AYRON ENC Obfuscator', _label, None
+
+            # 6. Otherwise try marshal on the final bytes
+            try:
+                _code_obj = marshal.loads(_data)
+                _result = _disassemble_code(_code_obj)
+                _label = ' → '.join(_chain_labels) + ' → marshal'
+                return _result, 'AYRON ENC Obfuscator', _label, None
+            except Exception:
+                pass
+
+            # 7. Fallback: try as plain text
+            _text = try_decode_bytes(_data)
+            if looks_readable(_text, 0.60):
+                _label = ' → '.join(_chain_labels) + ' → plaintext'
+                return _text, 'AYRON ENC Obfuscator', _label, None
+
+        except Exception:
+            pass
+
     # ── 0. Lyrox obfuscator (base91 + lzma + zip) ──────────────────────────
     # Pattern: VIP='LyroxPy' / import Lyrox / var='<payload>' / Lyrox.Py(var)
     lyrox_call = re.search(r'Lyrox\.Py\((\S+?)\)', text_stripped)
